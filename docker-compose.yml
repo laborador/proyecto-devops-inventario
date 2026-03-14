@@ -1,0 +1,138 @@
+# =============================================================
+# docker-compose.yml — Proyecto: Sistema de Inventario
+# =============================================================
+# Este archivo orquesta dos servicios:
+#   1. api   → Next.js (API CRUD de inventario, puerto 3000)
+#   2. db    → PostgreSQL 15 (base de datos, solo accesible internamente)
+#
+# Cómo usarlo:
+#   Arrancar:   docker compose up -d --build
+#   Detener:    docker compose down
+#   Logs:       docker compose logs -f
+#   Reiniciar:  docker compose restart api
+# =============================================================
+
+# Versión del esquema de Compose (3.8 soporta healthcheck con condición)
+version: '3.8'
+
+# =============================================================
+# SERVICIOS
+# Cada "service" es un contenedor independiente.
+# =============================================================
+services:
+
+  # -----------------------------------------------------------
+  # SERVICIO 1: api
+  # El servidor Next.js que expone las rutas /api/...
+  # -----------------------------------------------------------
+  api:
+    # "build" le dice a Compose que construya la imagen desde un Dockerfile
+    # en lugar de descargarla de Docker Hub.
+    build:
+      context: ./api        # Carpeta que contiene el Dockerfile y el código
+      dockerfile: Dockerfile
+
+    # Nombre legible para el contenedor (útil en logs y comandos docker ps)
+    container_name: inventario-api
+
+    # Mapeo de puertos: <puerto-en-el-VPS>:<puerto-dentro-del-contenedor>
+    # Así tu VPS recibirá tráfico en 3000 y lo redirige al proceso Next.js.
+    ports:
+      - "3000:3000"
+
+    # Variables de entorno que el proceso Next.js puede leer con process.env
+    environment:
+      NODE_ENV: production
+      # La URL de conexión a Postgres usa "db" como hostname
+      # porque "db" es el nombre del servicio en este mismo archivo.
+      # Docker resuelve ese nombre dentro de la red interna automáticamente.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+    # depends_on con condición: Docker NO arrancará "api" hasta que
+    # "db" reporte que su healthcheck está en estado "healthy".
+    # Evita errores de "connection refused" al iniciar.
+    depends_on:
+      db:
+        condition: service_healthy
+
+    # Red a la que pertenece este contenedor.
+    # Solo los contenedores en la misma red pueden comunicarse entre sí.
+    networks:
+      - inventario-network
+
+    # Política de reinicio:
+    #   unless-stopped → reinicia si crashea, pero NO al hacer "docker compose down"
+    restart: unless-stopped
+
+
+  # -----------------------------------------------------------
+  # SERVICIO 2: db
+  # PostgreSQL usando la imagen oficial (Alpine = imagen más pequeña)
+  # -----------------------------------------------------------
+  db:
+    # Usamos la imagen oficial de Docker Hub, no construimos nada.
+    # "postgres:15-alpine" = versión 15, basada en Alpine Linux (~30 MB)
+    image: postgres:15-alpine
+
+    container_name: inventario-db
+
+    # Estas variables las lee la imagen oficial de Postgres al arrancar
+    # para crear el usuario, contraseña y base de datos inicial.
+    # Los valores vienen del archivo .env (ver .env.example)
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    # Volúmenes: mapeo de almacenamiento
+    volumes:
+      # 1. Volumen con nombre (gestionado por Docker) → persiste los datos
+      #    aunque elimines y vuelvas a crear el contenedor.
+      - postgres_data:/var/lib/postgresql/data
+
+      # 2. Archivo SQL local → se ejecuta automáticamente la primera vez
+      #    que Postgres arranca con una base de datos vacía.
+      #    Úsalo para crear tablas y datos iniciales.
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    # Healthcheck: Compose sondea este comando periódicamente.
+    # "api" espera a que esto reporte "healthy" antes de arrancar.
+    healthcheck:
+      # pg_isready devuelve 0 (OK) cuando Postgres acepta conexiones
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s   # Comprueba cada 10 segundos
+      timeout: 5s     # Falla si no responde en 5 segundos
+      retries: 5      # Marca "unhealthy" tras 5 fallos consecutivos
+
+    networks:
+      - inventario-network
+
+    restart: unless-stopped
+
+    # SEGURIDAD: NO exponemos el puerto 5432 al exterior del VPS.
+    # Postgres solo es accesible desde dentro de la red Docker.
+    # Si necesitas conectarte desde tu máquina local para debug, añade:
+    #   ports:
+    #     - "5432:5432"
+    # Pero quítalo en producción.
+
+
+# =============================================================
+# VOLÚMENES
+# Docker gestiona este directorio en el host. Los datos de Postgres
+# sobreviven aunque el contenedor sea eliminado y recreado.
+# Ubicación real en el VPS: /var/lib/docker/volumes/inventario-1_postgres_data/
+# =============================================================
+volumes:
+  postgres_data:
+    driver: local
+
+
+# =============================================================
+# REDES
+# Red bridge privada: los contenedores se ven entre sí por nombre
+# (ej: "db", "api") pero están aislados del resto del sistema.
+# =============================================================
+networks:
+  inventario-network:
+    driver: bridge

@@ -1,0 +1,17 @@
+# Secrets — nunca subir a git
+.env
+.env.local
+.env.production
+
+# Next.js build output
+api/.next/
+api/node_modules/
+api/out/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

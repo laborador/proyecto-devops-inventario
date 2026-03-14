@@ -1,0 +1,10 @@
+# Archivos que Docker NO debe copiar dentro de la imagen
+# (equivalente al .gitignore pero para el contexto de build)
+node_modules
+.next
+.env
+.env.local
+npm-debug.log*
+*.log
+README.md
+.git
