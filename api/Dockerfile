@@ -54,7 +54,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copiamos solo los archivos que Next.js standalone genera:
 # server.js + .next/standalone + archivos estáticos
-COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
