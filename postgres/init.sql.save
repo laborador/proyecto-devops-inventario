@@ -1,6 +1,5 @@
 -- ==========================================
--- Script de inicialización de PostgreSQL
--- Se ejecuta automáticamente cuando inicia el contenedor
+-- Script de inicialización de PostgreS-- Se ejecuta automáticamente cuando inicia el contenedor
 -- ==========================================
 
 -- Crear tabla de productos del inventario

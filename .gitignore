@@ -1,17 +1,40 @@
-# Secrets — nunca subir a git
+# Environment variables
 .env
 .env.local
-.env.production
+.env.*.local
 
-# Next.js build output
-api/.next/
-api/node_modules/
-api/out/
+# Next.js
+.next
+out
+build
+dist
 
-# Logs
-*.log
+# Node.js
+node_modules
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
 
 # OS
-.DS_Store
 Thumbs.db
+
+# Database
+*.sql.bak
+postgres_data/
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Logs
+logs/
+*.log
