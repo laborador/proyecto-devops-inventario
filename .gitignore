@@ -33,7 +33,6 @@ postgres_data/
 
 # Docker
 .dockerignore
-Dockerfile
 
 # Logs
 logs/
