@@ -16,7 +16,7 @@ lint:
       - api/node_modules/
   before_script:
     - cd $APP_DIR
-    - npm ci
+    - npm install
   script:
     - echo "Verificando codigo..."
     - npx next lint --max-warnings 0 || echo "Lint completado"
@@ -33,7 +33,7 @@ build:
       - api/node_modules/
   before_script:
     - cd $APP_DIR
-    - npm ci
+    - npm install
   script:
     - echo "Compilando Next.js..."
     - npm run build
