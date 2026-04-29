@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # =============================================================
 # docker-compose.yml — Proyecto: Sistema de Inventario
 # =============================================================
@@ -120,16 +121,124 @@ services:
 # sobreviven aunque el contenedor sea eliminado y recreado.
 # Ubicación real en el VPS: /var/lib/docker/volumes/inventario-1_postgres_data/
 # =============================================================
+=======
+version: '3.8'
+
+# Definición de volúmenes que usarán los contenedores
+>>>>>>> e2f924cd5ec58efed17623987c172fb001d2a5ce
 volumes:
   postgres_data:
     driver: local
 
-
-# =============================================================
-# REDES
-# Red bridge privada: los contenedores se ven entre sí por nombre
-# (ej: "db", "api") pero están aislados del resto del sistema.
-# =============================================================
+# Red personalizada para que los contenedores se comuniquen
 networks:
-  inventario-network:
+  inventario_network:
     driver: bridge
+
+services:
+  # ============================================
+  # SERVICIO 1: BASE DE DATOS POSTGRESQL
+  # ============================================
+  postgres:
+    # Imagen de PostgreSQL desde Docker Hub
+    image: postgres:15-alpine
+    
+    # Nombre del contenedor (importante para conectarse desde la API)
+    container_name: inventario_db
+    
+    # Variables de entorno para configurar PostgreSQL
+    environment:
+      # Usuario root de PostgreSQL
+      POSTGRES_USER: ${DB_USER}
+      # Contraseña del usuario
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Base de datos que se creará automáticamente
+      POSTGRES_DB: ${DB_NAME}
+    
+    # Volumen para guardar datos de forma persistente
+    # Si el contenedor se detiene, los datos no se pierden
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Script SQL que se ejecuta al iniciar (opcional)
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    
+    # Mapeo de puertos: localhost:5432 -> contenedor:5432
+    # Solo expone si necesitas conectarte desde fuera del Docker
+    ports:
+      - "5432:5432"
+    
+    # Red a la que pertenece (para comunicarse con otros servicios)
+    networks:
+      - inventario_network
+    
+    # Reinicia automáticamente si falla
+    restart: unless-stopped
+    
+    # Logs más detallados
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # SERVICIO 2: API NEXTJS (CRUD)
+  # ============================================
+  api:
+    # Construir imagen desde el Dockerfile local
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    
+    # Nombre del contenedor
+    container_name: inventario_api
+    
+    # Variables de entorno para la API
+    environment:
+      # URL de conexión a PostgreSQL
+      # Interno del Docker: postgres (nombre del servicio)
+      # Externo (localhost): localhost
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      
+      # Configuración de Next.js
+      NODE_ENV: production
+      
+      # Token secreto para JWT (seguridad)
+      JWT_SECRET: ${JWT_SECRET}
+      
+      # URL base de la API (cambiar según tu dominio)
+      NEXT_PUBLIC_API_URL: ${API_URL}
+    
+    # Volumen para desarrollo (hot reload)
+    volumes:
+      # Monta el código de la API en el contenedor
+      - ./api:/app
+      # Evita sobreescribir node_modules del contenedor
+      - /app/node_modules
+      # Opcional: para evitar caché durante desarrollo
+      - /app/.next
+    
+    # Mapeo de puertos: localhost:3000 -> contenedor:3000
+    ports:
+      - "3000:3000"
+    
+    # Comando para iniciar la API
+    command: npm run dev
+    
+    # Depende de PostgreSQL (espera a que esté listo)
+    depends_on:
+      postgres:
+        condition: service_started
+    
+    # Red compartida con la BD
+    networks:
+      - inventario_network
+    
+    # Reinicia automáticamente
+    restart: unless-stopped
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

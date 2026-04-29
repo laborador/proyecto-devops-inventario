@@ -1,22 +1,23 @@
-# =============================================================
-# Dockerfile — Next.js API
-# Build multi-etapa: separa instalación, compilación y ejecución
-# para que la imagen final sea lo más pequeña posible.
-# =============================================================
+# ========================================
+# STAGE 1: BUILDER (Construcción)
+# ========================================
+FROM node:18-alpine AS builder
 
-# ─── ETAPA 1: deps ───────────────────────────────────────────
-# Solo instala las dependencias de node_modules.
-# Si package.json no cambia, Docker reutiliza esta capa en caché
-# y no vuelve a ejecutar npm ci (mucho más rápido en re-builds).
-FROM node:20-alpine AS deps
-
+# Establecer directorio de trabajo
 WORKDIR /app
+<<<<<<< HEAD
 # Copiamos primero solo los archivos de dependencias
 COPY package.json package-lock.json* ./
+=======
 
-# npm ci = instalación limpia y reproducible (usa package-lock.json)
+# Copiar archivos de dependencias
+COPY package*.json ./
+>>>>>>> e2f924cd5ec58efed17623987c172fb001d2a5ce
+
+# Instalar dependencias (solo las necesarias para producción)
 RUN npm ci
 
+<<<<<<< HEAD
 
 
 # ─── ETAPA 2: builder ────────────────────────────────────────
@@ -38,38 +39,37 @@ RUN mkdir -p public
 # Compilamos Next.js
 # next.config.js debe tener output: 'standalone' para que el build
 # genere un servidor Node.js autónomo que no depende de node_modules completo.
+=======
+# Copiar código fuente
+COPY . .
+
+# Construir la aplicación Next.js
+>>>>>>> e2f924cd5ec58efed17623987c172fb001d2a5ce
 RUN npm run build
 
+# ========================================
+# STAGE 2: RUNTIME (Ejecución)
+# ========================================
+FROM node:18-alpine
 
-# ─── ETAPA 3: runner ─────────────────────────────────────────
-# Imagen final: solo lo necesario para ejecutar la app.
-# Esta es la imagen que Docker Compose usará en producción.
-FROM node:20-alpine AS runner
-
+# Directorio de trabajo
 WORKDIR /app
 
-# Buenas prácticas de seguridad: no correr como root dentro del contenedor
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser  --system --uid 1001 nextjs
-
+# Variables de entorno
 ENV NODE_ENV=production
-# Deshabilita telemetría de Next.js
-ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copiamos solo los archivos que Next.js standalone genera:
-# server.js + .next/standalone + archivos estáticos
+# Copiar solo los archivos necesarios del stage anterior
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/package*.json ./
 
-# Cambiamos al usuario sin privilegios
-USER nextjs
-
-# Puerto que expone el contenedor (debe coincidir con docker-compose.yml)
+# Exponer puerto (3000 es el default de Next.js)
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+# Health check (verifica que la API esté viva)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# Comando de inicio: el servidor standalone generado por Next.js
-CMD ["node", "server.js"]
+# Comando para iniciar
+CMD ["npm", "start"]
