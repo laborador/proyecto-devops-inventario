@@ -12,9 +12,6 @@
 #   Reiniciar:  docker compose restart api
 # =============================================================
 
-# Versión del esquema de Compose (3.8 soporta healthcheck con condición)
-version: '3.8'
-
 # =============================================================
 # SERVICIOS
 # Cada "service" es un contenedor independiente.

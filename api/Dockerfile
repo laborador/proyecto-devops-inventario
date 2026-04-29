@@ -15,7 +15,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # npm ci = instalación limpia y reproducible (usa package-lock.json)
-RUN npm install
+RUN npm ci
 
 
 
@@ -23,13 +23,17 @@ RUN npm install
 # Compila la aplicación Next.js en modo producción.
 FROM node:20-alpine AS builder
 
-WORKDIR /
+WORKDIR /app
 
 # Traemos node_modules de la etapa anterior
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copiamos el resto del código fuente
 COPY . .
+
+# Si el proyecto no trae carpeta public, la creamos para que el COPY
+# de la etapa runner no falle.
+RUN mkdir -p public
 
 # Compilamos Next.js
 # next.config.js debe tener output: 'standalone' para que el build
