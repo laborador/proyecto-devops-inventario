@@ -11,19 +11,19 @@
 FROM node:20-alpine AS deps
 
 WORKDIR /app
-
 # Copiamos primero solo los archivos de dependencias
 COPY package.json package-lock.json* ./
 
 # npm ci = instalación limpia y reproducible (usa package-lock.json)
-RUN npm ci
+RUN npm install
+
 
 
 # ─── ETAPA 2: builder ────────────────────────────────────────
 # Compila la aplicación Next.js en modo producción.
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /
 
 # Traemos node_modules de la etapa anterior
 COPY --from=deps /app/node_modules ./node_modules
