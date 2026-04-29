@@ -487,3 +487,70 @@ docker-compose logs -f
 ```
 
 **Mantén tu .env seguro y nunca lo publiques en Git.** 🔐
+
+---
+
+## ⚙️ Pipeline de CI/CD
+
+### ¿Qué hace el pipeline?
+
+El archivo `.gitlab-ci.yml` define un pipeline de integración continua con 3 stages que corren automáticamente en cada push:
+
+| Stage | Job | Descripción |
+|-------|-----|-------------|
+| `lint` | lint | Analiza el código con ESLint para detectar errores de sintaxis y estilo |
+| `build` | build | Compila el proyecto Next.js en modo producción |
+| `test` | test | Verifica que la API responda correctamente en el servidor |
+
+### ¿Cómo se activa?
+
+El pipeline se dispara automáticamente ante cualquier `push` a la rama `main` o al abrir un `merge request`. No requiere activación manual.
+
+### Flujo del pipelinepush a main
+│
+▼
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│  lint   │────▶│  build  │────▶│  test   │
+└─────────┘     └─────────┘     └─────────┘### Variables de entorno
+
+Las credenciales sensibles (usuario y contraseña de base de datos) se manejan como **variables protegidas de GitLab** y nunca se escriben directamente en el código ni en el `.gitlab-ci.yml`.
+
+### Estado del pipeline
+
+El estado (éxito o fallo) es visible en **GitLab → Build → Pipelines**.
+EOFcd ~/proyecto-devops-inventario-1
+git add README.md
+git commit -m "docs: agregar sección del pipeline de CI al README"
+git push gitlab main
+cat >> ~/proyecto-devops-inventario-1/README.md << 'EOF'
+
+---
+
+## ⚙️ Pipeline de CI/CD
+
+### ¿Qué hace el pipeline?
+
+El archivo `.gitlab-ci.yml` define un pipeline de integración continua con 3 stages que corren automáticamente en cada push:
+
+| Stage | Job | Descripción |
+|-------|-----|-------------|
+| `lint` | lint | Analiza el código con ESLint para detectar errores de sintaxis y estilo |
+| `build` | build | Compila el proyecto Next.js en modo producción |
+| `test` | test | Verifica que la API responda correctamente en el servidor |
+
+### ¿Cómo se activa?
+
+El pipeline se dispara automáticamente ante cualquier `push` a la rama `main` o al abrir un `merge request`. No requiere activación manual.
+
+### Flujo del pipelinepush a main
+│
+▼
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│  lint   │────▶│  build  │────▶│  test   │
+└─────────┘     └─────────┘     └─────────┘### Variables de entorno
+
+Las credenciales sensibles (usuario y contraseña de base de datos) se manejan como **variables protegidas de GitLab** y nunca se escriben directamente en el código ni en el `.gitlab-ci.yml`.
+
+### Estado del pipeline
+
+El estado (éxito o fallo) es visible en **GitLab → Build → Pipelines**.
